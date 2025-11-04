@@ -300,21 +300,21 @@ const Profile = ({ onClose }) => {
                     <div className="font-medium" style={{ color: 'var(--color-text)' }}>Animations</div>
                     <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Enable chat animations and effects</div>
                   </div>
-                  <label className="relative inline-block w-12 h-6">
+                  <label className="relative inline-block w-12 h-6 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={user?.preferences?.animationsEnabled}
+                      checked={user?.preferences?.animationsEnabled ?? true}
                       onChange={(e) => handlePreferenceToggle('animationsEnabled', e.target.checked)}
-                      className="opacity-0 w-0 h-0"
+                      className="sr-only"
                     />
                     <span
                       className="absolute cursor-pointer inset-0 rounded-full transition-all"
                       style={{
-                        backgroundColor: user?.preferences?.animationsEnabled ? 'var(--color-primary)' : 'var(--color-border)'
+                        backgroundColor: user?.preferences?.animationsEnabled ? 'var(--color-primary)' : '#ccc'
                       }}
                     >
                       <span
-                        className="absolute left-1 bottom-1 bg-white w-4 h-4 rounded-full transition-all"
+                        className="absolute left-1 bottom-1 bg-white w-4 h-4 rounded-full transition-transform"
                         style={{
                           transform: user?.preferences?.animationsEnabled ? 'translateX(24px)' : 'translateX(0)'
                         }}
@@ -328,21 +328,21 @@ const Profile = ({ onClose }) => {
                     <div className="font-medium" style={{ color: 'var(--color-text)' }}>XP Visibility</div>
                     <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Show experience points in Learning mode</div>
                   </div>
-                  <label className="relative inline-block w-12 h-6">
+                  <label className="relative inline-block w-12 h-6 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={user?.preferences?.xpVisible}
+                      checked={user?.preferences?.xpVisible ?? true}
                       onChange={(e) => handlePreferenceToggle('xpVisible', e.target.checked)}
-                      className="opacity-0 w-0 h-0"
+                      className="sr-only"
                     />
                     <span
                       className="absolute cursor-pointer inset-0 rounded-full transition-all"
                       style={{
-                        backgroundColor: user?.preferences?.xpVisible ? 'var(--color-primary)' : 'var(--color-border)'
+                        backgroundColor: user?.preferences?.xpVisible ? 'var(--color-primary)' : '#ccc'
                       }}
                     >
                       <span
-                        className="absolute left-1 bottom-1 bg-white w-4 h-4 rounded-full transition-all"
+                        className="absolute left-1 bottom-1 bg-white w-4 h-4 rounded-full transition-transform"
                         style={{
                           transform: user?.preferences?.xpVisible ? 'translateX(24px)' : 'translateX(0)'
                         }}

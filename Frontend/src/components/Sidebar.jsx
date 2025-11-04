@@ -28,19 +28,20 @@ const Sidebar = () => {
   };
 
   const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-    loadChats({
-      keyword: e.target.value,
-      mode: filterMode === 'all' ? undefined : filterMode
-    });
+    const q = e.target.value;
+    setSearchQuery(q);
+    const filters = {};
+    if (q && q.trim() !== '') filters.keyword = q.trim();
+    if (filterMode !== 'all') filters.mode = filterMode;
+    loadChats(filters);
   };
 
   const handleFilterChange = (mode) => {
     setFilterMode(mode);
-    loadChats({
-      keyword: searchQuery,
-      mode: mode === 'all' ? undefined : mode
-    });
+    const filters = {};
+    if (searchQuery && searchQuery.trim() !== '') filters.keyword = searchQuery.trim();
+    if (mode !== 'all') filters.mode = mode;
+    loadChats(filters);
   };
 
   const getModeIcon = (modeName) => {
@@ -177,13 +178,13 @@ const Sidebar = () => {
       </div>
 
       {/* Chat History */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
         <div className="flex items-center justify-between mb-3">
           <h2 
             className="text-sm font-semibold uppercase tracking-wide"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            Chat History
+            Chat History ({chats.length})
           </h2>
           {chats.length > 0 && (
             <button
@@ -206,92 +207,60 @@ const Sidebar = () => {
           </div>
         ) : (
           <>
-            {/* Group chats by mode */}
-            {['developer', 'learner', 'hr'].map((modeName) => {
-              const modeChats = chats.filter(chat => chat.mode === modeName);
-              if (modeChats.length === 0 && filterMode !== 'all') return null;
-              
-              return (
-                <div key={modeName} className="space-y-2">
-                  {/* Mode Header */}
-                  {filterMode === 'all' && modeChats.length > 0 && (
-                    <div className="flex items-center gap-2 px-2 py-1">
-                      <span className="text-lg">{getModeIcon(modeName)}</span>
+            {/* Show ALL chats in a simple list */}
+            {chats.map((chat) => (
+              <div
+                key={chat._id}
+                className="relative group chat-item"
+              >
+                <button
+                  onClick={() => handleChatClick(chat._id)}
+                  className="w-full text-left p-3 rounded-lg transition-all hover-lift"
+                  style={{
+                    backgroundColor: currentChat?._id === chat._id 
+                      ? 'rgba(255, 255, 255, 0.15)' 
+                      : 'transparent',
+                    border: currentChat?._id === chat._id 
+                      ? '1px solid rgba(255, 255, 255, 0.2)' 
+                      : '1px solid transparent'
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-base">{getModeIcon(chat.mode)}</span>
                       <h3 
-                        className="text-xs font-semibold uppercase tracking-wide"
-                        style={{ color: 'var(--color-text-secondary)' }}
+                        className="font-medium truncate text-sm"
+                        style={{ color: 'var(--color-text)' }}
                       >
-                        {modeName === 'developer' ? 'Development' : modeName === 'learner' ? 'Learning' : 'HR & Operations'}
+                        {chat.title}
                       </h3>
-                      <span 
-                        className="text-xs px-2 py-0.5 rounded-full"
-                        style={{ 
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          color: 'var(--color-text-secondary)'
-                        }}
-                      >
-                        {modeChats.length}
-                      </span>
                     </div>
-                  )}
-                  
-                  {/* Chats for this mode */}
-                  {modeChats.map((chat) => (
-                    <div
-                      key={chat._id}
-                      className="relative group chat-item"
-                    >
-                      <button
-                        onClick={() => handleChatClick(chat._id)}
-                        className="w-full text-left p-3 rounded-lg transition-all hover-lift"
-                        style={{
-                          backgroundColor: currentChat?._id === chat._id 
-                            ? 'rgba(255, 255, 255, 0.15)' 
-                            : 'transparent',
-                          border: currentChat?._id === chat._id 
-                            ? '1px solid rgba(255, 255, 255, 0.2)' 
-                            : '1px solid transparent'
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {filterMode !== 'all' && <span className="text-base">{getModeIcon(chat.mode)}</span>}
-                            <h3 
-                              className="font-medium truncate text-sm"
-                              style={{ color: 'var(--color-text)' }}
-                            >
-                              {chat.title}
-                            </h3>
-                          </div>
-                          {chat.isPinned && (
-                            <Pin size={14} style={{ color: 'var(--color-accent)' }} />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                          <Calendar size={12} />
-                          {format(new Date(chat.updatedAt), 'MMM d, yyyy')}
-                        </div>
-                      </button>
-                      
-                      {/* Delete button - shows on hover */}
-                      <button
-                        onClick={(e) => handleDeleteChat(chat._id, e)}
-                        className="delete-btn absolute right-2 top-2 p-1.5 rounded-md transition-all"
-                        style={{ 
-                          backgroundColor: 'rgba(248, 113, 113, 0.2)',
-                          backdropFilter: 'blur(4px)'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.9)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(248, 113, 113, 0.2)'}
-                        title="Delete chat"
-                      >
-                        <Trash2 size={14} style={{ color: '#fee2e2' }} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
+                    {chat.isPinned && (
+                      <Pin size={14} style={{ color: 'var(--color-accent)' }} />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    <Calendar size={12} />
+                    {format(new Date(chat.updatedAt), 'MMM d, yyyy')}
+                  </div>
+                </button>
+                
+                {/* Delete button - shows on hover */}
+                <button
+                  onClick={(e) => handleDeleteChat(chat._id, e)}
+                  className="delete-btn absolute right-2 top-2 p-1.5 rounded-md transition-all"
+                  style={{ 
+                    backgroundColor: 'rgba(248, 113, 113, 0.2)',
+                    backdropFilter: 'blur(4px)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.9)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(248, 113, 113, 0.2)'}
+                  title="Delete chat"
+                >
+                  <Trash2 size={14} style={{ color: '#fee2e2' }} />
+                </button>
+              </div>
+            ))}
           </>
         )}
       </div>

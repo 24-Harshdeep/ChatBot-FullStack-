@@ -59,12 +59,11 @@ export const AuthProvider = ({ children }) => {
         password
       });
       
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setToken(token);
-      setUser(user);
-      
-      return { success: true };
+      // Backend now returns success without token (user must login separately)
+      return { 
+        success: true,
+        message: response.data.message || 'Registration successful! Please login.'
+      };
     } catch (error) {
       return {
         success: false,

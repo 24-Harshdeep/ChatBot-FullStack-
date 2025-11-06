@@ -16,36 +16,45 @@ router.post('/register', async (req, res) => {
     }
 
     // Check if user already exists
-    let user = await User.findOne({ email });
-    if (user) {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // Hash password securely
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user
-    user = new User({
+    const newUser = new User({
       name,
       email,
       password: hashedPassword,
+      preferences: {
+        darkMode: false,
+        xpVisible: true,
+        animationsEnabled: true,
+      },
+      stats: {
+        level: 1,
+        xp: 0,
+        lastActive: Date.now(),
+      },
     });
 
-    await user.save();
+    await newUser.save();
 
     res.status(201).json({
       success: true,
       message: 'Registration successful! Please login with your credentials.',
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
       },
     });
   } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Register error:', error.message);
+    res.status(500).json({ message: 'Server error during registration' });
   }
 });
 
@@ -54,49 +63,51 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Basic validation
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Check if user exists
+    // Find user
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Verify password
+    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Update last active
-    if (user.stats) user.stats.lastActive = Date.now();
+    // Update last active timestamp
+    user.stats.lastActive = Date.now();
     await user.save();
 
-    // Create JWT token
+    // Generate JWT
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'fallbacksecret',
       { expiresIn: '7d' }
     );
 
-    res.json({
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
       token,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
-        profilePicture: user.profilePicture,
-        preferences: user.preferences,
-        stats: user.stats,
-        integrations: user.integrations,
+        profilePicture: user.profilePicture || null,
+        preferences: user.preferences || {},
+        stats: user.stats || {},
         createdAt: user.createdAt,
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Login error:', error.message);
+    res.status(500).json({ message: 'Server error during login' });
   }
 });
 
@@ -105,10 +116,10 @@ router.get('/profile', auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
+    res.status(200).json(user);
   } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Profile fetch error:', error.message);
+    res.status(500).json({ message: 'Server error fetching profile' });
   }
 });
 
@@ -125,10 +136,10 @@ router.put('/profile', auth, async (req, res) => {
     if (profilePicture !== undefined) user.profilePicture = profilePicture;
 
     await user.save();
-    res.json(user);
+    res.status(200).json({ message: 'Profile updated successfully', user });
   } catch (error) {
-    console.error('Update profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Profile update error:', error.message);
+    res.status(500).json({ message: 'Server error updating profile' });
   }
 });
 
@@ -137,30 +148,28 @@ router.get('/preferences', auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user.preferences);
+    res.status(200).json(user.preferences);
   } catch (error) {
-    console.error('Get preferences error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Preferences fetch error:', error.message);
+    res.status(500).json({ message: 'Server error fetching preferences' });
   }
 });
 
 // 🛠️ Update user preferences
 router.put('/preferences', auth, async (req, res) => {
   try {
+    const { preferences } = req.body;
     const user = await User.findById(req.userId);
+
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (req.body.defaultMode) user.preferences.defaultMode = req.body.defaultMode;
-    if (req.body.themes) user.preferences.themes = { ...user.preferences.themes, ...req.body.themes };
-    if (req.body.darkMode !== undefined) user.preferences.darkMode = req.body.darkMode;
-    if (req.body.animationsEnabled !== undefined) user.preferences.animationsEnabled = req.body.animationsEnabled;
-    if (req.body.xpVisible !== undefined) user.preferences.xpVisible = req.body.xpVisible;
-
+    user.preferences = { ...user.preferences, ...preferences };
     await user.save();
-    res.json(user.preferences);
+
+    res.status(200).json({ message: 'Preferences updated', preferences: user.preferences });
   } catch (error) {
-    console.error('Update preferences error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Preferences update error:', error.message);
+    res.status(500).json({ message: 'Server error updating preferences' });
   }
 });
 
@@ -169,10 +178,10 @@ router.get('/stats', auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user.stats);
+    res.status(200).json(user.stats);
   } catch (error) {
-    console.error('Get stats error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Stats fetch error:', error.message);
+    res.status(500).json({ message: 'Server error fetching stats' });
   }
 });
 

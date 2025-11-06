@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
+const path = require('path');
 
 // Load environment variables
 dotenv.config();
@@ -22,18 +23,18 @@ const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
-  'https://chat-bot-full-stack.vercel.app', // main Vercel domain
+  'https://chat-bot-full-stack.vercel.app', // Vercel main domain
 ];
 
-// ✅ Helper function to allow Vercel preview URLs
+// ✅ Helper: Allow Vercel preview subdomains
 const isVercelPreview = (origin) =>
   origin && origin.endsWith('.vercel.app');
 
-// ✅ CORS Setup
+// ✅ CORS Configuration
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // allow mobile apps, curl
+      if (!origin) return callback(null, true); // allow non-browser tools
       if (allowedOrigins.includes(origin) || isVercelPreview(origin)) {
         return callback(null, true);
       } else {
@@ -47,56 +48,72 @@ app.use(
   })
 );
 
-// ✅ Preflight (OPTIONS) handling
+// ✅ Preflight (OPTIONS) requests
 app.options('*', cors());
 
-// Middleware
+// ✅ Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// ✅ Routes (with /api prefix)
+// ✅ Routes
 app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/modes', modeRoutes);
 
-// ✅ Health check endpoint
+// ✅ Health Check Route
 app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'Backend is running successfully!' });
+  res.status(200).json({
+    status: 'ok',
+    message: 'Backend is running successfully 🚀',
+    environment: process.env.NODE_ENV || 'development',
+  });
+});
+
+// ✅ Unknown route handler (avoid 404 noise)
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: 'Endpoint not found',
+  });
 });
 
 // ✅ Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('❌ Error:', err.message);
+  console.error('❌ Server Error:', err.message);
   res.status(500).json({
+    success: false,
     message: 'Internal Server Error',
     error: err.message,
   });
 });
 
-// ✅ Database connection + server start
+// ✅ MongoDB connection + Server start
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI =
   process.env.MONGODB_URI || 'mongodb://localhost:27017/adaptive-chatbot';
 
 mongoose
-  .connect(MONGODB_URI)
+  .connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(async () => {
     console.log('✅ Connected to MongoDB');
     await seedModes();
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(
-        `📡 Frontend URL allowed: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`
-      );
+      console.log(`📡 Allowed origins:`);
+      allowedOrigins.forEach((url) => console.log(`   - ${url}`));
     });
   })
   .catch((error) => {
-    console.error('❌ MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error.message);
     process.exit(1);
   });
 
-// ✅ Handle unhandled promise rejections
+// ✅ Handle unhandled rejections safely
 process.on('unhandledRejection', (err) => {
-  console.error('🚨 Unhandled Promise Rejection:', err);
+  console.error('🚨 Unhandled Promise Rejection:', err.message);
+  process.exit(1);
 });

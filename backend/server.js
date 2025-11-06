@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
-const path = require('path');
 
 // Load environment variables
 dotenv.config();
@@ -18,28 +17,30 @@ const { seedModes } = require('./config/seedModes');
 
 const app = express();
 
-// ✅ Allowed origins (main + preview URLs)
+/* ======================================================
+   ✅ 1. CORS Configuration — Secure & Flexible
+====================================================== */
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
+  process.env.LOCAL_URL || 'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
-  'https://chat-bot-full-stack.vercel.app', // Vercel main domain
+  'https://chat-bot-full-stack.vercel.app', // Vercel main
 ];
 
-// ✅ Helper: Allow Vercel preview subdomains
+// Helper: allow any Vercel preview (e.g. *.vercel.app)
 const isVercelPreview = (origin) =>
   origin && origin.endsWith('.vercel.app');
 
-// ✅ CORS Configuration
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // allow non-browser tools
+      if (!origin) return callback(null, true); // Allow requests without Origin (e.g. Postman)
       if (allowedOrigins.includes(origin) || isVercelPreview(origin)) {
-        return callback(null, true);
+        callback(null, true);
       } else {
-        console.warn(`🚫 CORS blocked request from origin: ${origin}`);
-        return callback(new Error('CORS not allowed'), false);
+        console.warn(`🚫 CORS blocked request from: ${origin}`);
+        callback(new Error('CORS not allowed'), false);
       }
     },
     credentials: true,
@@ -48,19 +49,24 @@ app.use(
   })
 );
 
-// ✅ Preflight (OPTIONS) requests
 app.options('*', cors());
 
-// ✅ Middleware
+/* ======================================================
+   ✅ 2. Middleware
+====================================================== */
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// ✅ Routes
+/* ======================================================
+   ✅ 3. API Routes
+====================================================== */
 app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/modes', modeRoutes);
 
-// ✅ Health Check Route
+/* ======================================================
+   ✅ 4. Health Check Route
+====================================================== */
 app.get('/', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -69,15 +75,19 @@ app.get('/', (req, res) => {
   });
 });
 
-// ✅ Unknown route handler (avoid 404 noise)
-app.use((req, res, next) => {
+/* ======================================================
+   ⚠️ 5. Fallback for Unknown Routes
+====================================================== */
+app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: 'Endpoint not found',
   });
 });
 
-// ✅ Error handling middleware
+/* ======================================================
+   🚨 6. Centralized Error Handler
+====================================================== */
 app.use((err, req, res, next) => {
   console.error('❌ Server Error:', err.message);
   res.status(500).json({
@@ -87,23 +97,22 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ✅ MongoDB connection + Server start
+/* ======================================================
+   🧩 7. MongoDB Connection + Server Start
+====================================================== */
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI =
   process.env.MONGODB_URI || 'mongodb://localhost:27017/adaptive-chatbot';
 
 mongoose
-  .connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(MONGODB_URI)
   .then(async () => {
     console.log('✅ Connected to MongoDB');
     await seedModes();
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📡 Allowed origins:`);
+      console.log('📡 Allowed origins:');
       allowedOrigins.forEach((url) => console.log(`   - ${url}`));
     });
   })
@@ -112,7 +121,9 @@ mongoose
     process.exit(1);
   });
 
-// ✅ Handle unhandled rejections safely
+/* ======================================================
+   🔐 8. Handle Unhandled Promise Rejections
+====================================================== */
 process.on('unhandledRejection', (err) => {
   console.error('🚨 Unhandled Promise Rejection:', err.message);
   process.exit(1);

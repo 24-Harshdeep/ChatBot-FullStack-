@@ -5,10 +5,15 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 
-// Register a new user
+// 🧩 Register a new user
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
+
+    // Validation
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
 
     // Check if user already exists
     let user = await User.findOne({ email });
@@ -24,20 +29,19 @@ router.post('/register', async (req, res) => {
     user = new User({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
     });
 
     await user.save();
 
-    // Return success without auto-login
     res.status(201).json({
       success: true,
       message: 'Registration successful! Please login with your credentials.',
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
-      }
+        email: user.email,
+      },
     });
   } catch (error) {
     console.error('Register error:', error);
@@ -45,10 +49,14 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login user
+// 🔐 Login user
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     // Check if user exists
     const user = await User.findOne({ email });
@@ -63,7 +71,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Update last active
-    user.stats.lastActive = Date.now();
+    if (user.stats) user.stats.lastActive = Date.now();
     await user.save();
 
     // Create JWT token
@@ -83,8 +91,8 @@ router.post('/login', async (req, res) => {
         preferences: user.preferences,
         stats: user.stats,
         integrations: user.integrations,
-        createdAt: user.createdAt
-      }
+        createdAt: user.createdAt,
+      },
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -92,13 +100,11 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get user profile
+// 👤 Get user profile
 router.get('/profile', auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select('-password');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (error) {
     console.error('Get profile error:', error);
@@ -106,15 +112,13 @@ router.get('/profile', auth, async (req, res) => {
   }
 });
 
-// Update user profile
+// 🧾 Update user profile
 router.put('/profile', auth, async (req, res) => {
   try {
     const { name, email, profilePicture } = req.body;
     const user = await User.findById(req.userId);
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     if (name) user.name = name;
     if (email) user.email = email;
@@ -128,13 +132,11 @@ router.put('/profile', auth, async (req, res) => {
   }
 });
 
-// Get user preferences
+// ⚙️ Get user preferences
 router.get('/preferences', auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user.preferences);
   } catch (error) {
     console.error('Get preferences error:', error);
@@ -142,15 +144,12 @@ router.get('/preferences', auth, async (req, res) => {
   }
 });
 
-// Update user preferences
+// 🛠️ Update user preferences
 router.put('/preferences', auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Update preferences
     if (req.body.defaultMode) user.preferences.defaultMode = req.body.defaultMode;
     if (req.body.themes) user.preferences.themes = { ...user.preferences.themes, ...req.body.themes };
     if (req.body.darkMode !== undefined) user.preferences.darkMode = req.body.darkMode;
@@ -165,13 +164,11 @@ router.put('/preferences', auth, async (req, res) => {
   }
 });
 
-// Get user stats
+// 📊 Get user stats
 router.get('/stats', auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user.stats);
   } catch (error) {
     console.error('Get stats error:', error);

@@ -75,6 +75,30 @@ app.get('/', (req, res) => {
   });
 });
 
+// Debug endpoint to check environment and DB connection
+app.get('/api/debug', async (req, res) => {
+  try {
+    const dbStatus = mongoose.connection.readyState;
+    const dbStates = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+    
+    res.status(200).json({
+      mongodb: {
+        status: dbStates[dbStatus] || 'unknown',
+        hasUri: !!process.env.MONGODB_URI,
+        uriPrefix: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 20) + '...' : 'not set'
+      },
+      env: {
+        hasJwtSecret: !!process.env.JWT_SECRET,
+        hasGeminiKey: !!process.env.GEMINI_API_KEY,
+        frontendUrl: process.env.FRONTEND_URL || 'not set',
+        nodeEnv: process.env.NODE_ENV || 'development'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 /* ======================================================
    ⚠️ 5. Fallback for Unknown Routes
 ====================================================== */

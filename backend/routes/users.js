@@ -30,13 +30,21 @@ router.post('/register', async (req, res) => {
       email,
       password: hashedPassword,
       preferences: {
-        darkMode: false,
+        defaultMode: 'developer',
+        themes: {
+          developer: 'neural-blue',
+          learner: 'aurora-teal',
+          hr: 'solar-amber'
+        },
+        darkMode: true,
         xpVisible: true,
         animationsEnabled: true,
       },
       stats: {
-        level: 1,
-        xp: 0,
+        totalChats: 0,
+        favoriteMode: 'developer',
+        learningXP: 0,
+        streakDays: 0,
         lastActive: Date.now(),
       },
     });
